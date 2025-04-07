@@ -1,7 +1,11 @@
-name: Manually Build Distroless Unbound Docker Image
+name: Build Distroless Unbound Docker Image
 
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * *'
+    - cron: '0 16 * * *'
+  push:
+    branches: [ "main" ]
       
 jobs:   
   buildvars:
@@ -50,13 +54,14 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
               
       - name: Build and push
         uses: docker/build-push-action@v6
         env:
-          DOCKERHUB_SLUG: "madnuttah/unbound"
+          DOCKERHUB_SLUG: "ghcr.io/btreemap/unbound"
           UNBOUND_DOCKER_IMAGE_VERSION: "1.22.0-2"
         with:
           platforms: linux/386,linux/arm/v6,linux/arm/v7,linux/arm64,linux/amd64
@@ -73,5 +78,7 @@ jobs:
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ${{ env.DOCKERHUB_SLUG }}:${{ env.UNBOUND_DOCKER_IMAGE_VERSION }}      
+            ${{ env.DOCKERHUB_SLUG }}:${{ env.UNBOUND_DOCKER_IMAGE_VERSION }}
+            ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_SHA256 }}
+            ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.IMAGE_BUILD_DATE }}
             ${{ env.DOCKERHUB_SLUG }}:latest 
