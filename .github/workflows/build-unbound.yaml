@@ -87,7 +87,7 @@ jobs:
             OPENSSL_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION }}  
           file: ./unbound/release.Dockerfile   
           outputs: |
-            type=registry,compression=zstd,force-compression=true,compression-level=3,rewrite-timestamp=true
+            type=registry,compression=zstd,force-compression=true,compression-level=3,rewrite-timestamp=true,oci-mediatypes=true
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: ${{ github.event_name != 'pull_request' }}
           tags: |
