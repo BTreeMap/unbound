@@ -17,6 +17,7 @@ jobs:
       UNBOUND_SHA256: ${{ steps.IMPORT_BUILDVARS.outputs.UNBOUND_SHA256 }}
       BUILD_DATE: ${{ steps.IMPORT_BUILDVARS.outputs.BUILD_DATE }}
       BUILD_DATE_TIME: ${{ steps.IMPORT_BUILDVARS.outputs.BUILD_DATE_TIME }}
+      SOURCE_DATE_EPOCH: ${{ steps.IMPORT_BUILDVARS.outputs.SOURCE_DATE_EPOCH }}
       OPENSSL_BUILDENV_VERSION: ${{ steps.GET_OPENSSL_BUILDENV_VERSION.outputs.OPENSSL_BUILDENV_VERSION }}
 
     steps:            
@@ -32,6 +33,7 @@ jobs:
           echo IMAGE_BUILD_DATE=$(date -u -d "@$now") >> $GITHUB_OUTPUT
           echo BUILD_DATE=$(date -u -d "@$now" '+%Y-%m-%d') >> $GITHUB_OUTPUT
           echo BUILD_DATE_TIME=$(date -u -d "@$now" '+%Y-%m-%d.%H-%M-%S') >> $GITHUB_OUTPUT
+          echo SOURCE_DATE_EPOCH=$(( (now / 2592000) * 2592000 )) >> $GITHUB_OUTPUT
           cat buildvars | grep UNBOUND_VERSION >> $GITHUB_OUTPUT
           cat buildvars | grep UNBOUND_SHA256 >> $GITHUB_OUTPUT     
 
@@ -41,7 +43,7 @@ jobs:
           echo OPENSSL_BUILDENV_VERSION="$(curl -s https://api.github.com/repos/madnuttah/openssl-buildenv/releases | jq '.[0] | .name' -r)" >> $GITHUB_OUTPUT    
          
   build: 
-    runs-on: ubuntu-22.04    
+    runs-on: ubuntu-22.04
     needs: buildvars
     permissions:
       contents: read
@@ -70,6 +72,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         env:
+          SOURCE_DATE_EPOCH: ${{ needs.buildvars.outputs.SOURCE_DATE_EPOCH }}
           DOCKERHUB_SLUG: "ghcr.io/btreemap/unbound"
           UNBOUND_DOCKER_IMAGE_VERSION: "1.22.0-2"
         with:
@@ -83,7 +86,8 @@ jobs:
             UNBOUND_DOCKER_IMAGE_VERSION=${{ env.UNBOUND_DOCKER_IMAGE_VERSION }}
             OPENSSL_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION }}  
           file: ./unbound/release.Dockerfile   
-          push: ${{ github.event_name != 'pull_request' }}
+          outputs: |
+            type=registry,compression=zstd,force-compression=true,compression-level=3,rewrite-timestamp=true
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: ${{ github.event_name != 'pull_request' }}
           tags: |
