@@ -15,6 +15,7 @@ jobs:
       IMAGE_BUILD_DATE: ${{ steps.IMPORT_BUILDVARS.outputs.IMAGE_BUILD_DATE }}
       UNBOUND_VERSION: ${{ steps.IMPORT_BUILDVARS.outputs.UNBOUND_VERSION }}
       UNBOUND_SHA256: ${{ steps.IMPORT_BUILDVARS.outputs.UNBOUND_SHA256 }}
+      UNBOUND_DOCKER_IMAGE_VERSION: ${{ steps.IMPORT_BUILDVARS.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
       BUILD_DATE: ${{ steps.IMPORT_BUILDVARS.outputs.BUILD_DATE }}
       BUILD_DATE_TIME: ${{ steps.IMPORT_BUILDVARS.outputs.BUILD_DATE_TIME }}
       SOURCE_DATE_EPOCH: ${{ steps.IMPORT_BUILDVARS.outputs.SOURCE_DATE_EPOCH }}
@@ -36,6 +37,7 @@ jobs:
           echo SOURCE_DATE_EPOCH=$(( (now / 2592000) * 2592000 )) >> $GITHUB_OUTPUT
           cat buildvars | grep UNBOUND_VERSION >> $GITHUB_OUTPUT
           cat buildvars | grep UNBOUND_SHA256 >> $GITHUB_OUTPUT     
+          cat buildvars | grep UNBOUND_DOCKER_IMAGE_VERSION >> $GITHUB_OUTPUT
 
       - name: Get OpenSSL buildenv version
         id: GET_OPENSSL_BUILDENV_VERSION
@@ -74,16 +76,15 @@ jobs:
         env:
           SOURCE_DATE_EPOCH: ${{ needs.buildvars.outputs.SOURCE_DATE_EPOCH }}
           DOCKERHUB_SLUG: "ghcr.io/btreemap/unbound"
-          UNBOUND_DOCKER_IMAGE_VERSION: "1.22.0-2"
         with:
           platforms: linux/386,linux/arm/v6,linux/arm/v7,linux/arm64,linux/amd64
           builder: ${{ steps.buildx.outputs.name }}
           build-args: |
             DOCKERHUB_SLUG=${{ env.DOCKERHUB_SLUG }} 
-            UNBOUND_SHA256=${{ needs.buildvars.outputs.UNBOUND_SHA256 }}  
             IMAGE_BUILD_DATE=${{ needs.buildvars.outputs.IMAGE_BUILD_DATE}}
             UNBOUND_VERSION=${{ needs.buildvars.outputs.UNBOUND_VERSION }}  
-            UNBOUND_DOCKER_IMAGE_VERSION=${{ env.UNBOUND_DOCKER_IMAGE_VERSION }}
+            UNBOUND_SHA256=${{ needs.buildvars.outputs.UNBOUND_SHA256 }}  
+            UNBOUND_DOCKER_IMAGE_VERSION=${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
             OPENSSL_BUILDENV_VERSION=${{ needs.buildvars.outputs.OPENSSL_BUILDENV_VERSION }}  
           file: ./unbound/release.Dockerfile   
           outputs: |
@@ -91,7 +92,7 @@ jobs:
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ${{ env.DOCKERHUB_SLUG }}:${{ env.UNBOUND_DOCKER_IMAGE_VERSION }}
+            ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_DOCKER_IMAGE_VERSION }}
             ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.UNBOUND_SHA256 }}
             ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.BUILD_DATE }}
             ${{ env.DOCKERHUB_SLUG }}:${{ needs.buildvars.outputs.BUILD_DATE_TIME }}
